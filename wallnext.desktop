@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Name=WallNext
+Type=Application
+Exec=wallnext-gui
+Icon=mtpaint
+Terminal=true
+Categories=Utility;
