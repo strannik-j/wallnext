@@ -1,1 +1,2 @@
-wallnext 1.0
+wallnext 0.2.0
+copy logo.gif to /usr/share/wallnext/
