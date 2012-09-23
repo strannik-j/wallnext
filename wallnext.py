@@ -15,7 +15,7 @@
 #    copyright notice, this list of conditions and the following disclaimer
 #    in the documentation and/or other materials provided with the
 #    distribution.
-#  * Neither the name of the Strannik-j nor the names of its
+#  * Neither the name of the  nor the names of its
 #    contributors may be used to endorse or promote products derived from
 #    this software without specific prior written permission.
 #  * All advertising materials mentioning features or use of this software
@@ -38,38 +38,81 @@
 
 
 import os
+import shutil
 import signal
-from tkinter.filedialog import *
+import glob
 from random import randrange
 from subprocess import call as _call
 from time import sleep as _sleep
 import sys
 import fileinput
 
-interval = 0
-path_wall = ''
+wall_change_interval = 0
+wall_dir_path = ''
 wall_sort = 0
 chG = 0
-config0 = []
+conf_str_list = []
+wall_manager = 0
+wall_img_now = []
+
+img_files_list = []
 
 
-def read_dir(path_wall):
+pwd = os.getcwd()
+home_dir_path = os.path.expanduser('~')
+#home_dir_path = os.environ['HOME']
+conf_file_name = 'wallnext.conf'
+conf_dir_path = os.path.join(home_dir_path,'.config/wallnext')
+conf_file_path = os.path.join(conf_dir_path, conf_file_name)
+
+default_dir_path = os.path.join(pwd,'default')
+sub_wall_dir_path = []
+read_subdir_var = 0
+conf_str_list = []
+#sub_wall_dir_list = []
+version = "0.2.0"
+
+
+def read_wall_dir(wall_dir_path):
+	print('read_wall_dir')
+	
 	true_files = ('.jpg', '.png', 'jpeg', '.JPG', '.PNG', 'JPEG')
-	wall_dir = path_wall
-	all_files = os.listdir(wall_dir)
-	pic_files = []
-	for a in all_files:
+	wall_dir_path = wall_dir_path
+	all_img_files_list = os.listdir(wall_dir_path)
+	
+	for a in all_img_files_list:
 		if len(a) >= 5:
 			if a[-4:] in true_files:
-				pic_files.append(a)
-	return pic_files, wall_dir
+				img_files_list.append(os.path.join(wall_dir_path,a))
+	return img_files_list
 
-
-def random_pic(pic_files):
+def read_sub_wall_dir(wall_dir_path):
+	#global sub_wall_dir_list
+	sub_img_files_list = []
+	print('read_sub_wall_dir')
+	print('wall_dir_path = ',wall_dir_path)
+	print('glob = ',glob.glob(wall_dir_path+'*/'))
+	sub_wall_dir_list = glob.glob(wall_dir_path+'*/')
+	print('sub_wall_dir_list = ',sub_wall_dir_path)
+	for i in sub_wall_dir_list:
+		true_files = ('.jpg', '.png', 'jpeg', '.JPG', '.PNG', 'JPEG')
+		#wall_dir_path = wall_dir_path
+		all_files_list = os.listdir(i)
+		
+		for a in all_files_list:
+			
+			if len(a) >= 5:
+				if a[-4:] in true_files:
+					
+					sub_img_files_list.append(os.path.join(i,a))
+	print('ass')
+	return sub_img_files_list
+def random_pic(img_files_list):
+	print('random_pic')
 	ch0 = 0
 	ch0 = int(ch0)
 	rand = []
-	max_pic = len(pic_files)
+	max_pic = len(img_files_list)
 	while ch0 < max_pic:
 		ran = randrange(0, max_pic, 1)
 		if rand.count(ran) == 0:
@@ -80,136 +123,173 @@ def random_pic(pic_files):
 	return rand, max_pic
 	
 	
-def now_pic(rand, pic_files, wall_dir, ch1=0):
-	print('Now pic \
-	pic_files = ', pic_files)
-	now_pic_file = 'xxx'
-	print(os.access(wall_dir + now_pic_file, os.R_OK))
-	while os.access(wall_dir + now_pic_file, os.F_OK) == False:
+def img_now(rand, img_files_list,ch1=0):
+	print('img_now')
+	#global wall_img_now_file
+	#print('Now pic \
+	#img_files_list = ', img_files_list)
+	wall_img_now_file = 'xxx'
+	print(wall_img_now_file)
+	print('www',os.access(wall_img_now_file, os.R_OK))
+	while os.access(wall_img_now_file, os.F_OK) == False:
 		a = rand[ch1]
 		ch1 += 1
 		print ('Number picture: \
 		ch1 = ', ch1)
-		now_pic_file = pic_files[a]
-		print('now_pic_file = ', now_pic_file)
-	print('except pic_files')
-	return now_pic_file 
+		wall_img_now_file = img_files_list[a]
+		print('wall_img_now_file = ', wall_img_now_file)
+	print('except img_files_list')
+	return wall_img_now_file 
 
 
-def get_pic(now_pic_files, wall_dir):
-	print('get pic: ', now_pic_files)
-	pwd = os.getcwd() + '/'
-	tmpfl = open('.tmp_file.sh', 'w') 
-	tmpfls = ('#!/bin/bash \n'
-	'pcmanfm --set-wallpaper "' + wall_dir + now_pic_files + '"')
+def get_pic(now_img_files_list):
+	print('get_pic')
+	global wall_manager
+	tmpfls = ''
+	
+	print('get pic: ', now_img_files_list)
+	#pwd = os.getcwd() + '/'
+	tmpfl = open('/tmp/wallnext_tmp.sh', 'w') 
+	print('wall_manager = ',type(wall_manager))
+	if wall_manager == 'gsettings':
+		tmpfls = ('#!/bin/bash \n'
+		'gsettings set org.gnome.desktop.background picture-uri file://"' + now_img_files_list + '"')
+		
+	elif wall_manager == 'pcmanfm':
+		tmpfls = ('#!/bin/bash \n'
+		'pcmanfm --set-wallpaper "' + now_img_files_list + '"')
+	elif wall_manager == 'feh':
+		tmpfls = ('#!/bin/bash \n'
+		'feh --bg-scale "' + now_img_files_list + '"')
+	else:
+		print("i don'n know this wall manager")
+	print('tmpfls = ',tmpfls)
 	tmpfl.write(tmpfls)
 	tmpfl.close()
-	os.chmod(pwd + '.tmp_file.sh', 999)
-	_call(['./.tmp_file.sh'])
-	os.remove('.tmp_file.sh')
+	os.chmod(os.path.join(pwd,'/tmp/wallnext_tmp.sh'), 0o777)
+	_call(['/tmp/./wallnext_tmp.sh'])
+	os.remove('/tmp/wallnext_tmp.sh')
 
 	
-def _rand(pic_files):
-	rand_files, chM = random_pic(pic_files)
-	return rand_files, chM
+def _rand(img_files_list):
+	print('_rand')
+	rand_files_list, chM = random_pic(img_files_list)
+	return rand_files_list, chM
 	
 ch3 = 0 
 
 
-def _start0(rand_files, pic_files, ch3, wall_dir, chM, interval):
-
+def _start_random(rand_files_list, img_files_list, ch3, chM, wall_change_interval):
+	global wall_img_now
+	print('_start_random')
 	while ch3 < chM:
 		print('ch3 = ', ch3)
 		print('chM = ', chM)
-		now_p = now_pic(rand_files, pic_files, wall_dir, ch3)
-		get_pic(now_p, wall_dir)
+		wall_img_now = img_now(rand_files_list, img_files_list, ch3)
+		print('wall_img_now = ', wall_img_now)
+		get_pic(wall_img_now)
 		ch3 += 1
-		_sleep(interval)
+		_sleep(wall_change_interval)
 	else:
 		print('_start: ch3 = chM')
 		return 0
 
 
-def _start1(pic_files, ch3, wall_dir, chM, interval):
+def _start_name(img_files_list, ch3, chM, wall_change_interval):
 	while ch3 < chM:
 		print('ch3 = ', ch3)
 		print('chM = ', chM)
-		now_p = pic_files[ch3]
-		get_pic(now_p, wall_dir)
+		wall_img_now = img_files_list[ch3]
+		get_pic(wall_img_now)
 		ch3 += 1
-		print ('interval = ', interval)
-		_sleep(interval)
+		print ('wall_change_interval = ', wall_change_interval)
+		_sleep(wall_change_interval)
 	else:
 		print('_start: ch3 = chM')
 		return 0
 		
 def __init__():
-	
-	home_dir = os.environ['HOME']
-	conf_dir = home_dir + '/.config/wallnext/'
+	global pwd
+	global wall_manager
+	global home_dir_path
+	global conf_dir_path
+	global read_subdir_var
 
-# check presence of a config file
-	if os.access(conf_dir + 'file.conf', os.F_OK) == False:
-		# check: no file or dir
+	# check presence of a config file
+	# Проверяем наличие config каталога, и если его нет, создаем
+	if not os.path.exists(conf_dir_path):
+		os.makedirs(conf_dir_path) 
+
+	# check presence of a confin dir in a .config dir
+	# Проверяем наличие config файла, и если его нет, копируем из default
+	if not os.path.exists(conf_file_path):
+		print('no conf file')
+		shutil.copy2(os.path.join(default_dir_path,conf_file_name),conf_file_path)		
 		
-		# check presence of a confin dir in a .config dir
-		if os.access(conf_dir, os.F_OK) == False:
-			# no dir
-			os.makedirs(conf_dir)		# create "wallnext" dir in a "~/.config" dir
 		# start gui
+		print(pwd)
+		os.chdir(pwd)
 		try:
 			_call(['wallnext-gui'])			# start a GUI
 		except:
 			try:
 				_call(['./wallnext-gui'])
 			except:
-				_call(['wallnext-gui.py'])
-		sys.exit()
-	else:
-		print('else')
+				_call(['./wallnext-gui.py'])
+			sys.exit()
+
 		
-	cf = open(conf_dir + 'file.conf', 'r')	# read .conf file
+	conf_file_obj = open(conf_file_path, 'r')	# read .conf file
 
 	# derive a line of a config file
-	for i in fileinput.input(conf_dir + 'file.conf'):
-		config0.append(i)
+	for i in fileinput.input(conf_file_path):
+		conf_str_list.append(i)
 
-	wall_manager = config0[0] 					# wallpappers manager
-	path_wall = config0[1][:-1] + '/'		# PATH to wallpappers 
-	wall_sort = int(config0[2])
-	interval = int(config0[3])			# time interval
-	print(interval)
+	wall_manager = conf_str_list[0][:-1] 					# wallpappers manager
+	wall_dir_path = conf_str_list[1][:-1]				# PATH to wallpappers 
+	read_subdir_var = conf_str_list[2][:-1]
+	wall_sort = conf_str_list[3][:-1]
+	wall_change_interval = int(conf_str_list[4])			# time wall_change_interval
+	print(wall_change_interval)
 	
 	## kill PID (stop daemon)
+	print('pwd = ', pwd)
 	try:
-		cf = open(conf_dir + 'pid', "r")
+		pid_file_obj = open(os.path.join(conf_dir_path,'pid'), "r")
 		#print('open')
-		kill_pid = int(cf.readline())
-		#print(kill_pid)
+		kill_pid = int(pid_file_obj.readline())
+		print('kill_pid = ',kill_pid)
 		os.kill(kill_pid, signal.SIGTERM)
-		#print('kill')
-		cf.close()
+		print('kill')
+		pid_file_obj.close()
 	except:
 		print('except kill')
 	
 	## create PID file	
-	cf = open(conf_dir + 'pid', "w")
+	pid_file_obj = open(os.path.join(conf_dir_path,'pid'), "w")
 	pid = str(os.getpid())
-	cf.write(pid)
-	cf.close()
+	pid_file_obj.write(pid)
+	pid_file_obj.close()
 
-	pic_files, wall_dir = read_dir(path_wall)
+	img_files_list = read_wall_dir(wall_dir_path)
+	if read_subdir_var == '1':
+		img_files_list += read_sub_wall_dir(wall_dir_path)
 	while True:
-		if wall_sort == 0:
-			print('Random sort')
-			rand_files, chM = random_pic(pic_files)
-			_start0(rand_files, pic_files, ch3, wall_dir, chM, interval)
-		elif wall_sort == 1:
-			print("Sort by name \n", pic_files)
-			chM = len(pic_files)
-			_start1(pic_files, ch3, wall_dir, chM, interval)
+		if wall_sort == 'random':
+			print('Random sort \n', img_files_list)
+			print('len = ',len(img_files_list))
+			xxx = set(img_files_list)
+			print('len2 = ', len(xxx))
+			rand_files_list, chM = random_pic(img_files_list)
+			#print(rand_files_list)
+			_start_random(rand_files_list, img_files_list, ch3, chM, wall_change_interval)
+		elif wall_sort == 'name':
+			print("Sort by name \n", img_files_list)
+			chM = len(img_files_list)
+			_start_name(img_files_list, ch3, chM, wall_change_interval)
 		else:
-			print('wall_sort = ',wall_sort)
+			print('wall_sort = ',wall_sort, type(wall_sort))
+			
 			sys.exit()
 	
 __init__()
